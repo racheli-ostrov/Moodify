@@ -1,65 +1,126 @@
-// require('dotenv').config();
-// const { OAuth2Client } = require('google-auth-library');
-// const usersService = require('../service/usersService');
-// const jwt = require('jsonwebtoken');
-// const { sendWelcomeEmail } = require("../utils/sendMail");
+// // require('dotenv').config();
+// // const { OAuth2Client } = require('google-auth-library');
+// // const usersService = require('../service/usersService');
+// // const jwt = require('jsonwebtoken');
+// // const { sendWelcomeEmail } = require("../utils/sendMail");
 
-// const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// // const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// exports.googleLogin = async (req, res) => {
+// // exports.googleLogin = async (req, res) => {
+// //   try {
+// //     const { token } = req.body;
+// //     if (!token) return res.status(400).json({ error: "Missing token" });
+// //     const ticket = await client.verifyIdToken({
+// //       idToken: token,
+// //       audience: process.env.GOOGLE_CLIENT_ID,
+// //     });
+// //     const payload = ticket.getPayload();
+// //     const { email, name } = payload;
+// //     if (!email || !name) return res.status(400).json({ error: "Invalid Google payload" });
+// //     let user = await usersService.getByEmail(email);
+// //     let isNewUser = false;
+// //     if (!user) {
+// //       await usersService.create({
+// //         username: email,
+// //         email,
+// //         name,
+// //         password: null,
+// //         role: "user",
+// //       });
+// //       user = await usersService.getByEmail(email);
+// //       isNewUser = true;
+// //     }
+// //     if (isNewUser) {
+// //       try {
+// //         await sendWelcomeEmail(user.email, user.name);
+// //       } catch (mailErr) {
+// //         console.error("MAIL ERROR (Google):", mailErr.message);
+// //       }
+// //     }
+// //     const jwtToken = jwt.sign(
+// //       { id: user.id, role: user.role },
+// //       process.env.JWT_SECRET,
+// //       { expiresIn: "7d" }
+// //     );
+// //  res
+// //     .cookie("token", jwtToken, {
+// //       httpOnly: true,
+// //       sameSite: "None",
+// //       secure: true, 
+// //       path: "/",
+// //       maxAge: 1000 * 60 * 60 * 6
+// //     })
+// //     .json({ user });
+// //   } catch (err) {
+// //     console.error("Google login error:", err);
+// //     res.status(500).json({ error: "Google login failed" });
+// //   }
+// // };
+// import { OAuth2Client } from "google-auth-library";
+// import jwt from "jsonwebtoken";
+// import pool from "../../db/db.js";
+
+// const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
+
+// export async function googleLogin(req, res) {
 //   try {
 //     const { token } = req.body;
 //     if (!token) return res.status(400).json({ error: "Missing token" });
+
+//     // אימות רשמי מול Google
 //     const ticket = await client.verifyIdToken({
 //       idToken: token,
 //       audience: process.env.GOOGLE_CLIENT_ID,
 //     });
+
 //     const payload = ticket.getPayload();
-//     const { email, name } = payload;
-//     if (!email || !name) return res.status(400).json({ error: "Invalid Google payload" });
-//     let user = await usersService.getByEmail(email);
-//     let isNewUser = false;
-//     if (!user) {
-//       await usersService.create({
-//         username: email,
-//         email,
-//         name,
-//         password: null,
-//         role: "user",
-//       });
-//       user = await usersService.getByEmail(email);
-//       isNewUser = true;
+//     const { email, name, sub } = payload;
+
+//     if (!email) return res.status(400).json({ error: "Invalid Google payload" });
+
+//     // בדיקת משתמש קיים
+//     const [rows] = await pool.query("SELECT * FROM users WHERE email = ?", [email]);
+//     let user;
+
+//     if (rows.length) {
+//       user = rows[0];
+//     } else {
+//       const [result] = await pool.query(
+//         "INSERT INTO users (username, email, name, password, role, google_id) VALUES (?, ?, ?, ?, ?, ?)",
+//         [email, email, name, "", "user", sub]
+//       );
+//       const [newUserRows] = await pool.query("SELECT * FROM users WHERE id = ?", [result.insertId]);
+//       user = newUserRows[0];
 //     }
-//     if (isNewUser) {
-//       try {
-//         await sendWelcomeEmail(user.email, user.name);
-//       } catch (mailErr) {
-//         console.error("MAIL ERROR (Google):", mailErr.message);
-//       }
-//     }
+
+//     // יצירת טוקן JWT
 //     const jwtToken = jwt.sign(
-//       { id: user.id, role: user.role },
+//       { id: user.id, username: user.username, role: user.role },
 //       process.env.JWT_SECRET,
-//       { expiresIn: "7d" }
+//       { expiresIn: "6h" }
 //     );
-//  res
-//     .cookie("token", jwtToken, {
-//       httpOnly: true,
-//       sameSite: "None",
-//       secure: true, 
-//       path: "/",
-//       maxAge: 1000 * 60 * 60 * 6
-//     })
-//     .json({ user });
-//   } catch (err) {
-//     console.error("Google login error:", err);
+
+//     res
+//       .cookie("token", jwtToken, {
+//         httpOnly: true,
+//         sameSite: "None",
+//         secure: true,
+//         path: "/",
+//         maxAge: 1000 * 60 * 60 * 6
+//       })
+//       .json({
+//         user: { id: user.id, username: user.username, role: user.role },
+//       });
+//   } catch (error) {
+//     console.error("Google Login Error:", error.message);
 //     res.status(500).json({ error: "Google login failed" });
 //   }
-// };
+// }
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import pool from "../../db/db.js";
 
+// משתמשים באותו CLIENT_ID גם ליצירת הלקוח וגם לאימות
 const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
 
 export async function googleLogin(req, res) {
@@ -67,10 +128,12 @@ export async function googleLogin(req, res) {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: "Missing token" });
 
+    console.log("✅ Using Google Client ID:", process.env.VITE_GOOGLE_CLIENT_ID);
+
     // אימות רשמי מול Google
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: process.env.VITE_GOOGLE_CLIENT_ID, // ← כאן השינוי הקריטי
     });
 
     const payload = ticket.getPayload();
@@ -100,13 +163,14 @@ export async function googleLogin(req, res) {
       { expiresIn: "6h" }
     );
 
+    // שמירת הטוקן בעוגייה
     res
       .cookie("token", jwtToken, {
         httpOnly: true,
         sameSite: "None",
         secure: true,
         path: "/",
-        maxAge: 1000 * 60 * 60 * 6
+        maxAge: 1000 * 60 * 60 * 6,
       })
       .json({
         user: { id: user.id, username: user.username, role: user.role },
