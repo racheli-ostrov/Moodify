@@ -17,7 +17,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://modif.netlify.app",
+      "https://moodify-ashy-chi.vercel.app/login",
     ],
     credentials: true,
   })
