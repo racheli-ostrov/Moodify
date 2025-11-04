@@ -4,7 +4,7 @@ const usersService = require('../service/usersService');
 const jwt = require('jsonwebtoken');
 const { sendWelcomeEmail } = require("../utils/sendMail");
 
-const client = new OAuth2Client(process.env.VITE_GOOGLE_CLIENT_ID);
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 exports.googleLogin = async (req, res) => {
   try {
