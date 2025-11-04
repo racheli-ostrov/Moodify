@@ -45,8 +45,8 @@ exports.googleLogin = async (req, res) => {
  res
     .cookie("token", jwtToken, {
       httpOnly: true,
-      sameSite: "Lax",
-      secure: false, 
+      sameSite: "None",
+      secure: true, 
       path: "/",
       maxAge: 1000 * 60 * 60 * 6
     })

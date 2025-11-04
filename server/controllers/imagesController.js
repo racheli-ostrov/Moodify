@@ -17,6 +17,7 @@ exports.uploadAndDetectMood = async (req, res) => {
           Accept: "application/json",
         },
       }
+      ,{ withCredentials: true }
     );
     const mood = hfRes.data[0]?.label?.toLowerCase() || "unknown";
     await imagesService.createImage({

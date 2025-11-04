@@ -35,8 +35,8 @@ exports.register = async (req, res) => {
     res
       .cookie("token", token, {
         httpOnly: true,
-        sameSite: "Lax",
-        secure: false,
+        sameSite: "None",
+        secure: true,
         path: "/", 
         maxAge: 1000 * 60 * 60 * 6
       })
@@ -68,8 +68,8 @@ exports.login = async (req, res) => {
     res
       .cookie("token", token, {
         httpOnly: true,
-        sameSite: "Lax",
-        secure: false,
+        sameSite: "None",
+        secure: true,
           path: "/", 
         maxAge: 1000 * 60 * 60 * 6
       })
@@ -93,10 +93,10 @@ exports.getUserById = async (req, res) => {
 };
 
 exports.logout = (req, res) => {
-  res.clearCookie("token", {
+  res.clearCookie("token",jwtToken, {
     httpOnly: true,
-    sameSite: "Lax",
-    secure: false,
+    sameSite: "None",
+    secure: true,
       path: "/", 
   });
   res.status(200).json({ message: "Logged out" });
