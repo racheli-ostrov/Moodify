@@ -12,7 +12,7 @@ exports.googleLogin = async (req, res) => {
     if (!token) return res.status(400).json({ error: "Missing token" });
     const ticket = await client.verifyIdToken({
       idToken: token,
-      audience: process.env.VITE_GOOGLE_CLIENT_ID,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
     const { email, name } = payload;
